@@ -1,0 +1,100 @@
+from pydriller import Repository
+from radon.complexity import cc_visit
+from radon.raw import analyze
+
+# --- 1. DETECTORES DE ANNOYANCE (Métricas) ---
+
+def calcular_complexidade(codigo: str) -> int:
+    """Métrica 1: Complexidade Ciclomática (Ganso confuso)"""
+    if not codigo: return 0
+    try:
+        return sum(b.complexity for b in cc_visit(codigo))
+    except Exception:
+        return 0
+
+def calcular_tamanho(codigo: str) -> int:
+    """Métrica 2: Linhas Lógicas de Código - LLOC (Ganso bloqueando o caminho)"""
+    if not codigo: return 0
+    try:
+        return analyze(codigo).lloc
+    except Exception:
+        return 0
+
+# --- 2. REGRAS DO JOGO ---
+
+PESO_COMPLEXIDADE = 2 # Lógica confusa gera mais caos
+PESO_TAMANHO = 1      # Código longo gera caos normal
+
+placar_gooses = {}
+
+# --- 3. FILTRO ESTRITO DE ARQUIVOS ---
+
+def eh_arquivo_alvo(arquivo) -> bool:
+    """Garante que só vamos processar arquivos .py que foram MODIFICADOS"""
+    if arquivo.filename is None:
+        return False
+
+    return (
+        arquivo.filename.endswith('.py') and
+        arquivo.source_code is not None and
+        arquivo.source_code_before is not None
+    )
+
+# --- 4. MOTOR PRINCIPAL ---
+
+repo_alvo = "caminho/para/seu/repositorio/local"
+
+print("🦆 Soltando o ganso no repositório...\n")
+
+for commit in Repository(repo_alvo).traverse_commits():
+    for arquivo in commit.modified_files:
+
+        if eh_arquivo_alvo(arquivo):
+
+            # Calcula deltas de Complexidade
+            cc_antes = calcular_complexidade(arquivo.source_code_before)
+            cc_depois = calcular_complexidade(arquivo.source_code)
+            delta_cc = cc_depois - cc_antes
+
+            # Calcula deltas de Tamanho (LLOC)
+            tam_antes = calcular_tamanho(arquivo.source_code_before)
+            tam_depois = calcular_tamanho(arquivo.source_code)
+            delta_tam = tam_depois - tam_antes
+
+            # Pontuação do Commit
+            caos_neste_arquivo = 0
+            mensagens_caos = []
+
+            if delta_cc > 0:
+                pontos = delta_cc * PESO_COMPLEXIDADE
+                caos_neste_arquivo += pontos
+                mensagens_caos.append(f"+{pontos} por Complexidade")
+
+            if delta_tam > 0:
+                pontos = delta_tam * PESO_TAMANHO
+                caos_neste_arquivo += pontos
+                mensagens_caos.append(f"+{pontos} por Código Longo")
+
+            # Se o autor gerou caos, atualiza o placar e avisa!
+            if caos_neste_arquivo > 0:
+                autor = commit.author.name
+                placar_gooses[autor] = placar_gooses.get(autor, 0) + caos_neste_arquivo
+
+                motivos = " e ".join(mensagens_caos)
+                print(f"HONK! 🪿 {autor} causou caos em '{arquivo.filename}' ({motivos})")
+
+
+# --- 5. TELA FINAL ---
+
+print("\n" + "="*40)
+print("🏆 RANKING DE CAOS (MASTER GOOSES) 🏆")
+print("="*40)
+
+if not placar_gooses:
+    print("Nenhum caos detectado! Este repositório é muito pacífico.")
+else:
+    ranking = sorted(placar_gooses.items(), key=lambda x: x[1], reverse=True)
+
+    for i, (autor, pontuacao) in enumerate(ranking, 1):
+        icone = "👑" if i == 1 else "🦆"
+        print(f"{i}º LUGAR {icone}: {autor.ljust(20)} | {pontuacao} pontos de Annoyance")
