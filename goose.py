@@ -1,6 +1,7 @@
 from pydriller import Repository
 from radon.complexity import cc_visit
 from radon.raw import analyze
+import sys
 
 # --- 1. DETECTORES DE ANNOYANCE (Métricas) ---
 
@@ -41,10 +42,14 @@ def eh_arquivo_alvo(arquivo) -> bool:
     )
 
 # --- 4. MOTOR PRINCIPAL ---
+if len(sys.argv) < 2:
+    print("🦆 ERRO: Você esqueceu de me dizer onde soltar o ganso!")
+    print("Uso: python goose.py <caminho_do_repositorio>")
+    sys.exit(1)
 
-repo_alvo = "caminho/para/seu/repositorio/local"
+repo_alvo = sys.argv[1] # Pega o caminho digitado no terminal
 
-print("🦆 Soltando o ganso no repositório...\n")
+print(f"🦆 Soltando o ganso no repositório: {repo_alvo}...\n")
 
 for commit in Repository(repo_alvo).traverse_commits():
     for arquivo in commit.modified_files:
