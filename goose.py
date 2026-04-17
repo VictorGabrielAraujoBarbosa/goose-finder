@@ -27,9 +27,6 @@ def calcular_tamanho(codigo: str) -> int:
 PESO_COMPLEXIDADE = 2 # Lógica confusa gera mais caos (ou mais pontos de limpeza se reduzida)
 PESO_TAMANHO = 1      # Código longo gera caos normal
 
-placar_gooses = {}
-placar_janitors = {}
-
 # --- 3. FILTRO ESTRITO DE ARQUIVOS ---
 
 def eh_arquivo_alvo(arquivo) -> bool:
@@ -46,23 +43,20 @@ def eh_arquivo_alvo(arquivo) -> bool:
 # --- 4. CLI E CHARME (INTERFACE DO USUÁRIO) ---
 
 def mostrar_charme_e_parsear_argumentos():
-    """Gencia os menus de Help, Info e os argumentos passados no terminal."""
+    """Gerencia os menus de Help, Info e os argumentos passados no terminal."""
     parser = argparse.ArgumentParser(add_help=False)
 
-    # Argumentos
     parser.add_argument("repo_alvo", nargs="?", help="Caminho do repositório (local ou URL)")
     parser.add_argument("-h", "--help", action="store_true", help="Mostra a ajuda")
     parser.add_argument("-v", "--version", action="store_true", help="Mostra a versão")
 
     args = parser.parse_args()
 
-    # Tela de Versão / Info
     if args.version:
         print("🪿  Goose Finder v1.0.0 - 'Honk Edition'")
         print("Desenvolvido para provar que a paz nunca foi uma opção no code review.")
         sys.exit(0)
 
-    # Tela de Help / Usage (Mostrada se pedir help ou se esquecer de passar o repositório)
     if args.help or not args.repo_alvo:
         print("""
      __
@@ -88,7 +82,6 @@ def mostrar_charme_e_parsear_argumentos():
    🪿 Gansos (Gooses): Devs que aumentam a complexidade ou tamanho do código.
    🧹 Zeladores (Janitors): Devs que desatam os nós e limpam a bagunça.
         """)
-        # Sai com erro (1) se o usuário esqueceu o repo, ou sucesso (0) se ele só pediu o help.
         sys.exit(0 if args.help else 1)
 
     return args.repo_alvo
@@ -98,13 +91,19 @@ def mostrar_charme_e_parsear_argumentos():
 if __name__ == "__main__":
     repo_alvo = mostrar_charme_e_parsear_argumentos()
 
-    print(f"🦆 Soltando os gansos e chamando os zeladores no repositório: {repo_alvo}...\n")
+    # Estruturas de dados para o relatório
+    placar_gooses = {}
+    placar_janitors = {}
+    campos_de_batalha = {} # { 'arquivo.py': {'caos_acumulado': 0, 'tamanho_final': 0} }
+    historico_annoyances = [] # Lista de piores commits
+
+    print(f"🦆 O ganso está investigando furtivamente o repositório: {repo_alvo}...")
+    print("⏳ Isso pode levar um tempo dependendo do tamanho da bagunça...\n")
 
     for commit in Repository(repo_alvo).traverse_commits():
         for arquivo in commit.modified_files:
 
             if eh_arquivo_alvo(arquivo):
-
                 # Calcula deltas
                 cc_antes = calcular_complexidade(arquivo.source_code_before)
                 cc_depois = calcular_complexidade(arquivo.source_code)
@@ -114,68 +113,127 @@ if __name__ == "__main__":
                 tam_depois = calcular_tamanho(arquivo.source_code)
                 delta_tam = tam_depois - tam_antes
 
-                # Contadores
                 caos_neste_arquivo = 0
                 mensagens_caos = []
                 limpeza_neste_arquivo = 0
-                mensagens_limpeza = []
 
                 # Análise de Complexidade
                 if delta_cc > 0:
                     pontos = delta_cc * PESO_COMPLEXIDADE
                     caos_neste_arquivo += pontos
-                    mensagens_caos.append(f"+{pontos} por Complexidade")
+                    mensagens_caos.append(f"+{pontos} Complexidade")
                 elif delta_cc < 0:
-                    pontos = abs(delta_cc) * PESO_COMPLEXIDADE
-                    limpeza_neste_arquivo += pontos
-                    mensagens_limpeza.append(f"+{pontos} por Desatar Nós")
+                    limpeza_neste_arquivo += abs(delta_cc) * PESO_COMPLEXIDADE
 
                 # Análise de Tamanho
                 if delta_tam > 0:
                     pontos = delta_tam * PESO_TAMANHO
                     caos_neste_arquivo += pontos
-                    mensagens_caos.append(f"+{pontos} por Código Longo")
+                    mensagens_caos.append(f"+{pontos} LLOC")
                 elif delta_tam < 0:
-                    pontos = abs(delta_tam) * PESO_TAMANHO
-                    limpeza_neste_arquivo += pontos
-                    mensagens_limpeza.append(f"+{pontos} por Limpar Linhas")
+                    limpeza_neste_arquivo += abs(delta_tam) * PESO_TAMANHO
 
                 autor = commit.author.name
 
-                # Atualiza Placar Gooses
+                # --- COLETANDO DADOS DE CAOS ---
                 if caos_neste_arquivo > 0:
                     placar_gooses[autor] = placar_gooses.get(autor, 0) + caos_neste_arquivo
-                    motivos = " e ".join(mensagens_caos)
-                    print(f"HONK! 🪿 {autor} causou caos em '{arquivo.filename}' ({motivos})")
 
-                # Atualiza Placar Janitors
+                    historico_annoyances.append({
+                        'hash': commit.hash[:7],
+                        'autor': autor,
+                        'arquivo': arquivo.filename,
+                        'pontos': caos_neste_arquivo,
+                        'motivos': " e ".join(mensagens_caos),
+                        'mensagem_commit': commit.msg.split('\n')[0]
+                    })
+
+                    if arquivo.filename not in campos_de_batalha:
+                        campos_de_batalha[arquivo.filename] = {'caos_acumulado': 0, 'tamanho_final': 0}
+                    campos_de_batalha[arquivo.filename]['caos_acumulado'] += caos_neste_arquivo
+
+                # --- COLETANDO DADOS DE LIMPEZA ---
                 if limpeza_neste_arquivo > 0:
                     placar_janitors[autor] = placar_janitors.get(autor, 0) + limpeza_neste_arquivo
-                    motivos = " e ".join(mensagens_limpeza)
-                    print(f"🧹 SPARKLE! {autor} limpou a sujeira em '{arquivo.filename}' ({motivos})")
 
-    # --- 6. TELAS FINAIS ---
+                # Atualiza o tamanho final do arquivo para o heatmap
+                if arquivo.filename in campos_de_batalha:
+                    campos_de_batalha[arquivo.filename]['tamanho_final'] = tam_depois
 
-    print("\n" + "="*40)
-    print("🏆 RANKING DE CAOS (MASTER GOOSES) 🏆")
-    print("="*40)
 
-    if not placar_gooses:
-        print("Nenhum caos detectado! Este repositório é muito pacífico.")
+    # --- 6. GERAÇÃO DO RELATÓRIO (Telas Finais) ---
+
+    def gerar_barra_heatmap(score: float, max_score: float, tamanho_barra: int = 20) -> str:
+        """Gera uma barra visual ASCII para representar o quão crítico é o arquivo."""
+        if max_score == 0: return "[░"*tamanho_barra + "]"
+
+        proporcao = score / max_score
+        blocos_cheios = int(proporcao * tamanho_barra)
+        blocos_vazios = tamanho_barra - blocos_cheios
+
+        if proporcao > 0.7:
+            cor = "\033[91m" # Vermelho
+        elif proporcao > 0.3:
+            cor = "\033[93m" # Amarelo
+        else:
+            cor = "\033[90m" # Cinza
+
+        reset = "\033[0m"
+        barra = f"{cor}{'█'*blocos_cheios}{'░'*blocos_vazios}{reset}"
+        return f"[{barra}]"
+
+    print("\n" + "="*60)
+    print("📊 RELATÓRIO OFICIAL DO GANSO (GOOSE REPORT)")
+    print("="*60)
+
+    # SECÃO 1: CAMPOS DE BATALHA
+    print("\n🔥 TOP 5 CAMPOS DE BATALHA (Arquivos mais problemáticos por tamanho)")
+
+    batalhas_ativas = []
+    for arq, stats in campos_de_batalha.items():
+        if stats['tamanho_final'] > 0:
+            densidade = stats['caos_acumulado'] / stats['tamanho_final']
+            batalhas_ativas.append({
+                'arquivo': arq,
+                'densidade': densidade,
+                'caos': stats['caos_acumulado'],
+                'tamanho': stats['tamanho_final']
+            })
+
+    if not batalhas_ativas:
+        print("Nenhum arquivo problemático encontrado. Paz reina.")
     else:
-        ranking_gooses = sorted(placar_gooses.items(), key=lambda x: x[1], reverse=True)
-        for i, (autor, pontuacao) in enumerate(ranking_gooses, 1):
-            icone = "👑" if i == 1 else "🪿"
-            print(f"{i}º LUGAR {icone}: {autor.ljust(20)} | {pontuacao} pontos de Annoyance")
+        batalhas_ativas.sort(key=lambda x: x['densidade'], reverse=True)
+        top_batalhas = batalhas_ativas[:5]
+        max_densidade = top_batalhas[0]['densidade']
 
-    print("\n" + "="*40)
-    print("🧼 RANKING DE LIMPEZA (MASTER JANITORS) 🧼")
-    print("="*40)
+        for b in top_batalhas:
+            barra = gerar_barra_heatmap(b['densidade'], max_densidade)
+            print(f"{barra} {b['arquivo']}")
+            print(f"    └─ Caos Histórico: {b['caos']} pts | LLOC Atual: {b['tamanho']} | Densidade: {b['densidade']:.2f} pts/linha\n")
 
-    if not placar_janitors:
-        print("Nenhuma limpeza detectada! A cidade foi dominada pelos gansos.")
+
+    # SEÇÃO 2: MAIORES ANNOYANCES
+    print("\n💥 TOP 5 MAIORES ANNOYANCES (Os piores commits)")
+
+    if not historico_annoyances:
+        print("Nenhum ganso soltou um grasnado alto o suficiente.")
     else:
-        ranking_janitors = sorted(placar_janitors.items(), key=lambda x: x[1], reverse=True)
-        for i, (autor, pontuacao) in enumerate(ranking_janitors, 1):
-            icone = "🥇" if i == 1 else "🧹"
-            print(f"{i}º LUGAR {icone}: {autor.ljust(20)} | {pontuacao} pontos de Limpeza")
+        historico_annoyances.sort(key=lambda x: x['pontos'], reverse=True)
+
+        for i, ann in enumerate(historico_annoyances[:5], 1):
+            print(f"{i}. 🪿 [+{ann['pontos']} pts] {ann['arquivo']}")
+            print(f"   Autor: {ann['autor']} | Commit: {ann['hash']}")
+            print(f"   Motivos: {ann['motivos']}")
+            print(f"   Mensagem: \"{ann['mensagem_commit']}\"\n")
+
+
+    # SEÇÃO 3: PLACARES
+    print("🏆 HALL DA FAMA (E DA INFÂMIA)")
+
+    goose_vencedor = max(placar_gooses.items(), key=lambda x: x[1])[0] if placar_gooses else "Ninguém"
+    janitor_vencedor = max(placar_janitors.items(), key=lambda x: x[1])[0] if placar_janitors else "Ninguém"
+
+    print(f"👑 MASTER GOOSE (Maior causador de caos) : {goose_vencedor}")
+    print(f"🥇 MASTER JANITOR (Maior limpador)       : {janitor_vencedor}")
+    print("="*60 + "\n")
