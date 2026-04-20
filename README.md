@@ -2,6 +2,8 @@
 
 "Peace was never an option."
 
+Inspired by [gitevo](https://github.com/gitevo), a CLI utility for creating repo insights.
+
 Goose Finder is a CLI tool designed to hunt for "Annoyances" (code smells) in your Python repositories by analyzing the Git history. It identifies developers who increase code complexity and size (**Gooses**) and those who clean up the mess (**Janitors**).
 
 ## 🚀 Features
