@@ -63,6 +63,13 @@ The tool generates a summary report including:
 - **Hall of Fame**: The reigning "Master Goose" and "Master Janitor".
 
 ---
+
+## Authors:
+- Victor Gabriel Araujo Barbosa
+- Denner dos Santos Lopes
+- Felipe Dias de Souza Martins
+- João Paulo Moura Furtado
+
 *Developed to prove that peace was never an option in code review.*
 
 
