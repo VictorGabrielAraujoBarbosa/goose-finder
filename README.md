@@ -16,7 +16,7 @@ Inspired by [gitevo](https://github.com/gitevo), a CLI utility for creating repo
 
 Goose Finder is a CLI tool designed to hunt for "Annoyances" (code smells) in your Python repositories by analyzing the Git history. It identifies developers who increase code complexity and size (**Gooses**) and those who clean up the mess (**Janitors**).
 
-## 🚀 Features
+### 🚀 Key features
 
 - **Complexity Tracking**: Uses cyclomatic complexity to detect when code becomes harder to maintain.
 - **Size Analysis**: Tracks Logical Lines of Code (LLOC) to identify bloat.
@@ -26,7 +26,9 @@ Goose Finder is a CLI tool designed to hunt for "Annoyances" (code smells) in yo
   - **Top Annoyances**: Highlights the worst commits that introduced complexity or size.
   - **Hall of Fame**: A leaderboard for the "Master Goose" (most chaos) and "Master Janitor" (most cleanup).
 
-## 🛠️ Installation
+## TODO: Demo/Screenshots - Show it in action 
+
+## Installation - Step-by-step setup guide
 
 You will need Python installed, along with the following dependencies:
 
@@ -55,16 +57,21 @@ python goose_finder.py <path_to_repo_or_url> [options]
 | `-h, --help` | Shows help and a "honk" for you. |
 | `-v, --version` | Shows the current version of the tool. |
 
-## 📊 Example Output
+### 📊 Example Output
 
 The tool generates a summary report including:
 - **Top 5 Battlegrounds**: Files with the highest chaos density.
 - **Top 5 Annoyances**: The most disruptive commits.
 - **Hall of Fame**: The reigning "Master Goose" and "Master Janitor".
 
+# TODO: Development - How to run/build locally
+# TODO: Contributing - Link to CONTRIBUTING.md
+# TODO: License
+
 ---
 
-## Authors:
+## Acknowledgments - Credits and thanks
+### Authors:
 - Victor Gabriel Araujo Barbosa
 - Denner dos Santos Lopes
 - Felipe Dias de Souza Martins
