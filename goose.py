@@ -52,13 +52,18 @@ def mostrar_charme_e_parsear_argumentos():
 
     args = parser.parse_args()
 
+    def _print_utf8(text: str) -> None:
+        """Imprime texto com encoding UTF-8 explicito (compativel com Windows e Linux)."""
+        sys.stdout.buffer.write(text.encode("utf-8"))
+        sys.stdout.buffer.flush()
+
     if args.version:
-        print("🪿  Goose Finder v1.0.0 - 'Honk Edition'")
-        print("Desenvolvido para provar que a paz nunca foi uma opção no code review.")
+        _print_utf8("\U0001fabf  Goose Finder v1.0.0 - 'Honk Edition'\n")
+        _print_utf8("Desenvolvido para provar que a paz nunca foi uma opcao no code review.\n")
         sys.exit(0)
 
     if args.help or not args.repo_alvo:
-        print("""
+        _print_utf8(r"""
      __
    >(' )    HONK! Bem-vindo ao GOOSE FINDER!
      )/
@@ -66,7 +71,8 @@ def mostrar_charme_e_parsear_argumentos():
    /  `----/
    \  ~=- /
  ~^~^~^~^~^~^~
-
+""")
+        _print_utf8("""
  USO:
    python goose_finder.py <caminho_do_repositorio> [opções]
 
@@ -78,10 +84,10 @@ def mostrar_charme_e_parsear_argumentos():
    -v, --version              Mostra a versão atual da ferramenta.
 
  COMO FUNCIONA:
-   O ganso vasculha o histórico do git em busca de 'Annoyances' (code smells).
-   🪿 Gansos (Gooses): Devs que aumentam a complexidade ou tamanho do código.
-   🧹 Zeladores (Janitors): Devs que desatam os nós e limpam a bagunça.
-        """)
+   O ganso vasculha o historico do git em busca de 'Annoyances' (code smells).
+   \U0001fabf Gansos (Gooses): Devs que aumentam a complexidade ou tamanho do codigo.
+   \U0001f9f9 Zeladores (Janitors): Devs que desatam os nos e limpam a baguna.
+        \n""")
         sys.exit(0 if args.help else 1)
 
     return args.repo_alvo
@@ -89,6 +95,11 @@ def mostrar_charme_e_parsear_argumentos():
 # --- 5. MOTOR PRINCIPAL ---
 
 if __name__ == "__main__":
+    # Garante que o stdout usa UTF-8 em qualquer sistema operacional
+    if hasattr(sys.stdout, "buffer"):
+        import io
+        sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
+
     repo_alvo = mostrar_charme_e_parsear_argumentos()
 
     # Estruturas de dados para o relatório
