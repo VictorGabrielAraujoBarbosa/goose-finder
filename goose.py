@@ -3,20 +3,30 @@ from radon.complexity import cc_visit
 from radon.raw import analyze
 import argparse
 import sys
+import io
+
+# Garante que o stdout usa UTF-8 em qualquer sistema operacional
+if hasattr(sys.stdout, "buffer"):
+    sys.stdout = io.TextIOWrapper(
+        sys.stdout.buffer, encoding="utf-8", errors="replace")
 
 # --- 1. DETECTORES DE ANNOYANCE E LIMPEZA (Métricas) ---
 
+
 def calcular_complexidade(codigo: str) -> int:
     """Métrica 1: Complexidade Ciclomática (Ganso confuso)"""
-    if not codigo: return 0
+    if not codigo:
+        return 0
     try:
         return sum(b.complexity for b in cc_visit(codigo))
     except Exception:
         return 0
 
+
 def calcular_tamanho(codigo: str) -> int:
     """Métrica 2: Linhas Lógicas de Código - LLOC (Ganso bloqueando o caminho)"""
-    if not codigo: return 0
+    if not codigo:
+        return 0
     try:
         return analyze(codigo).lloc
     except Exception:
@@ -24,10 +34,13 @@ def calcular_tamanho(codigo: str) -> int:
 
 # --- 2. REGRAS DO JOGO ---
 
-PESO_COMPLEXIDADE = 2 # Lógica confusa gera mais caos (ou mais pontos de limpeza se reduzida)
+
+# Lógica confusa gera mais caos (ou mais pontos de limpeza se reduzida)
+PESO_COMPLEXIDADE = 2
 PESO_TAMANHO = 1      # Código longo gera caos normal
 
 # --- 3. FILTRO ESTRITO DE ARQUIVOS ---
+
 
 def eh_arquivo_alvo(arquivo) -> bool:
     """Garante que só vamos processar arquivos .py que foram MODIFICADOS"""
@@ -42,28 +55,27 @@ def eh_arquivo_alvo(arquivo) -> bool:
 
 # --- 4. CLI E CHARME (INTERFACE DO USUÁRIO) ---
 
+
 def mostrar_charme_e_parsear_argumentos():
     """Gerencia os menus de Help, Info e os argumentos passados no terminal."""
     parser = argparse.ArgumentParser(add_help=False)
 
-    parser.add_argument("repo_alvo", nargs="?", help="Caminho do repositório (local ou URL)")
-    parser.add_argument("-h", "--help", action="store_true", help="Mostra a ajuda")
-    parser.add_argument("-v", "--version", action="store_true", help="Mostra a versão")
+    parser.add_argument("repo_alvo", nargs="?",
+                        help="Caminho do repositório (local ou URL)")
+    parser.add_argument("-h", "--help", action="store_true",
+                        help="Mostra a ajuda")
+    parser.add_argument("-v", "--version",
+                        action="store_true", help="Mostra a versão")
 
     args = parser.parse_args()
 
-    def _print_utf8(text: str) -> None:
-        """Imprime texto com encoding UTF-8 explicito (compativel com Windows e Linux)."""
-        sys.stdout.buffer.write(text.encode("utf-8"))
-        sys.stdout.buffer.flush()
-
     if args.version:
-        _print_utf8("\U0001fabf  Goose Finder v1.0.0 - 'Honk Edition'\n")
-        _print_utf8("Desenvolvido para provar que a paz nunca foi uma opcao no code review.\n")
+        print("\U0001fabf  Goose Finder v1.0.0 - 'Honk Edition'")
+        print("Desenvolvido para provar que a paz nunca foi uma opcao no code review.")
         sys.exit(0)
 
     if args.help or not args.repo_alvo:
-        _print_utf8(r"""
+        print(r"""
      __
    >(' )    HONK! Bem-vindo ao GOOSE FINDER!
      )/
@@ -72,7 +84,7 @@ def mostrar_charme_e_parsear_argumentos():
    \  ~=- /
  ~^~^~^~^~^~^~
 """)
-        _print_utf8("""
+        print("""
  USO:
    python goose_finder.py <caminho_do_repositorio> [opções]
 
@@ -94,21 +106,18 @@ def mostrar_charme_e_parsear_argumentos():
 
 # --- 5. MOTOR PRINCIPAL ---
 
-if __name__ == "__main__":
-    # Garante que o stdout usa UTF-8 em qualquer sistema operacional
-    if hasattr(sys.stdout, "buffer"):
-        import io
-        sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
 
+if __name__ == "__main__":
     repo_alvo = mostrar_charme_e_parsear_argumentos()
 
     # Estruturas de dados para o relatório
     placar_gooses = {}
     placar_janitors = {}
-    campos_de_batalha = {} # { 'arquivo.py': {'caos_acumulado': 0, 'tamanho_final': 0} }
-    historico_annoyances = [] # Lista de piores commits
+    campos_de_batalha = {}  # { 'arquivo.py': {'caos_acumulado': 0, 'tamanho_final': 0} }
+    historico_annoyances = []  # Lista de piores commits
 
-    print(f"🦆 O ganso está investigando furtivamente o repositório: {repo_alvo}...")
+    print(
+        f"🦆 O ganso está investigando furtivamente o repositório: {repo_alvo}...")
     print("⏳ Isso pode levar um tempo dependendo do tamanho da bagunça...\n")
 
     for commit in Repository(repo_alvo).traverse_commits():
@@ -148,7 +157,8 @@ if __name__ == "__main__":
 
                 # --- COLETANDO DADOS DE CAOS ---
                 if caos_neste_arquivo > 0:
-                    placar_gooses[autor] = placar_gooses.get(autor, 0) + caos_neste_arquivo
+                    placar_gooses[autor] = placar_gooses.get(
+                        autor, 0) + caos_neste_arquivo
 
                     historico_annoyances.append({
                         'hash': commit.hash[:7],
@@ -160,34 +170,36 @@ if __name__ == "__main__":
                     })
 
                     if arquivo.filename not in campos_de_batalha:
-                        campos_de_batalha[arquivo.filename] = {'caos_acumulado': 0, 'tamanho_final': 0}
+                        campos_de_batalha[arquivo.filename] = {
+                            'caos_acumulado': 0, 'tamanho_final': 0}
                     campos_de_batalha[arquivo.filename]['caos_acumulado'] += caos_neste_arquivo
 
                 # --- COLETANDO DADOS DE LIMPEZA ---
                 if limpeza_neste_arquivo > 0:
-                    placar_janitors[autor] = placar_janitors.get(autor, 0) + limpeza_neste_arquivo
+                    placar_janitors[autor] = placar_janitors.get(
+                        autor, 0) + limpeza_neste_arquivo
 
                 # Atualiza o tamanho final do arquivo para o heatmap
                 if arquivo.filename in campos_de_batalha:
                     campos_de_batalha[arquivo.filename]['tamanho_final'] = tam_depois
 
-
     # --- 6. GERAÇÃO DO RELATÓRIO (Telas Finais) ---
 
     def gerar_barra_heatmap(score: float, max_score: float, tamanho_barra: int = 20) -> str:
         """Gera uma barra visual ASCII para representar o quão crítico é o arquivo."""
-        if max_score == 0: return "[░"*tamanho_barra + "]"
+        if max_score == 0:
+            return "[░"*tamanho_barra + "]"
 
         proporcao = score / max_score
         blocos_cheios = int(proporcao * tamanho_barra)
         blocos_vazios = tamanho_barra - blocos_cheios
 
         if proporcao > 0.7:
-            cor = "\033[91m" # Vermelho
+            cor = "\033[91m"  # Vermelho
         elif proporcao > 0.3:
-            cor = "\033[93m" # Amarelo
+            cor = "\033[93m"  # Amarelo
         else:
-            cor = "\033[90m" # Cinza
+            cor = "\033[90m"  # Cinza
 
         reset = "\033[0m"
         barra = f"{cor}{'█'*blocos_cheios}{'░'*blocos_vazios}{reset}"
@@ -221,8 +233,8 @@ if __name__ == "__main__":
         for b in top_batalhas:
             barra = gerar_barra_heatmap(b['densidade'], max_densidade)
             print(f"{barra} {b['arquivo']}")
-            print(f"    └─ Caos Histórico: {b['caos']} pts | LLOC Atual: {b['tamanho']} | Densidade: {b['densidade']:.2f} pts/linha\n")
-
+            print(
+                f"    └─ Caos Histórico: {b['caos']} pts | LLOC Atual: {b['tamanho']} | Densidade: {b['densidade']:.2f} pts/linha\n")
 
     # SEÇÃO 2: MAIORES ANNOYANCES
     print("\n💥 TOP 5 MAIORES ANNOYANCES (Os piores commits)")
@@ -238,12 +250,13 @@ if __name__ == "__main__":
             print(f"   Motivos: {ann['motivos']}")
             print(f"   Mensagem: \"{ann['mensagem_commit']}\"\n")
 
-
     # SEÇÃO 3: PLACARES
     print("🏆 HALL DA FAMA (E DA INFÂMIA)")
 
-    goose_vencedor = max(placar_gooses.items(), key=lambda x: x[1])[0] if placar_gooses else "Ninguém"
-    janitor_vencedor = max(placar_janitors.items(), key=lambda x: x[1])[0] if placar_janitors else "Ninguém"
+    goose_vencedor = max(placar_gooses.items(), key=lambda x: x[1])[
+        0] if placar_gooses else "Ninguém"
+    janitor_vencedor = max(placar_janitors.items(), key=lambda x: x[1])[
+        0] if placar_janitors else "Ninguém"
 
     print(f"👑 MASTER GOOSE (Maior causador de caos) : {goose_vencedor}")
     print(f"🥇 MASTER JANITOR (Maior limpador)       : {janitor_vencedor}")
