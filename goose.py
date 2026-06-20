@@ -1,6 +1,7 @@
 from pydriller import Repository
 from radon.complexity import cc_visit
 from radon.raw import analyze
+from radon.metrics import mi_visit
 import argparse
 import sys
 import io
@@ -32,12 +33,23 @@ def calcular_tamanho(codigo: str) -> int:
     except Exception:
         return 0
 
+
+def calcular_manutenibilidade(codigo: str) -> float:
+    """Métrica 3: Índice de Manutenibilidade - MI (Ganso confunde o mapa todo)"""
+    if not codigo:
+        return 100.0
+    try:
+        return mi_visit(codigo, True)
+    except Exception:
+        return 100.0
+
 # --- 2. REGRAS DO JOGO ---
 
 
 # Lógica confusa gera mais caos (ou mais pontos de limpeza se reduzida)
 PESO_COMPLEXIDADE = 2
 PESO_TAMANHO = 1      # Código longo gera caos normal
+PESO_MANUTENIBILIDADE = 1  # Queda no MI = ganso espalhou confusão pelo arquivo todo
 
 # --- 3. FILTRO ESTRITO DE ARQUIVOS ---
 
@@ -99,7 +111,7 @@ def mostrar_charme_e_parsear_argumentos():
    O ganso vasculha o historico do git em busca de 'Annoyances' (code smells).
    \U0001fabf Gansos (Gooses): Devs que aumentam a complexidade ou tamanho do codigo.
    \U0001f9f9 Zeladores (Janitors): Devs que desatam os nos e limpam a baguna.
-        \n""")
+        """)
         sys.exit(0 if args.help else 1)
 
     return args.repo_alvo
@@ -133,6 +145,11 @@ if __name__ == "__main__":
                 tam_depois = calcular_tamanho(arquivo.source_code)
                 delta_tam = tam_depois - tam_antes
 
+                mi_antes = calcular_manutenibilidade(
+                    arquivo.source_code_before)
+                mi_depois = calcular_manutenibilidade(arquivo.source_code)
+                delta_mi = mi_depois - mi_antes  # MI menor = pior
+
                 caos_neste_arquivo = 0
                 mensagens_caos = []
                 limpeza_neste_arquivo = 0
@@ -152,6 +169,15 @@ if __name__ == "__main__":
                     mensagens_caos.append(f"+{pontos} LLOC")
                 elif delta_tam < 0:
                     limpeza_neste_arquivo += abs(delta_tam) * PESO_TAMANHO
+
+                # Análise de Manutenibilidade
+                if delta_mi < 0:
+                    pontos = round(abs(delta_mi) * PESO_MANUTENIBILIDADE, 1)
+                    caos_neste_arquivo += pontos
+                    mensagens_caos.append(f"+{pontos} Manutenibilidade")
+                elif delta_mi > 0:
+                    limpeza_neste_arquivo += round(delta_mi *
+                                                   PESO_MANUTENIBILIDADE, 1)
 
                 autor = commit.author.name
 
