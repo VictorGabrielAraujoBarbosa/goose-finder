@@ -5,6 +5,7 @@ from radon.metrics import mi_visit
 import argparse
 import sys
 import io
+import ast
 
 # Garante que o stdout usa UTF-8 em qualquer sistema operacional
 if hasattr(sys.stdout, "buffer"):
@@ -43,6 +44,28 @@ def calcular_manutenibilidade(codigo: str) -> float:
     except Exception:
         return 100.0
 
+
+def contar_parametros_excessivos(codigo: str, limite: int = 4) -> int:
+    """Métrica 4: Excesso de parâmetros em funções (Ganso espalhando parâmetros)"""
+    if not codigo:
+        return 0
+    try:
+        arvore = ast.parse(codigo)
+    except SyntaxError:
+        return 0
+
+    excedentes = 0
+    for node in ast.walk(arvore):
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            total = len(node.args.args) + len(node.args.kwonlyargs)
+            if node.args.vararg:
+                total += 1
+            if node.args.kwarg:
+                total += 1
+            if total > limite:
+                excedentes += total - limite
+    return excedentes
+
 # --- 2. REGRAS DO JOGO ---
 
 
@@ -50,6 +73,7 @@ def calcular_manutenibilidade(codigo: str) -> float:
 PESO_COMPLEXIDADE = 2
 PESO_TAMANHO = 1      # Código longo gera caos normal
 PESO_MANUTENIBILIDADE = 1  # Queda no MI = ganso espalhou confusão pelo arquivo todo
+PESO_PARAMETROS = 1       # Cada parâmetro extra é mais uma pena pro próximo dev
 
 # --- 3. FILTRO ESTRITO DE ARQUIVOS ---
 
@@ -150,6 +174,12 @@ if __name__ == "__main__":
                 mi_depois = calcular_manutenibilidade(arquivo.source_code)
                 delta_mi = mi_depois - mi_antes  # MI menor = pior
 
+                param_antes = contar_parametros_excessivos(
+                    arquivo.source_code_before)
+                param_depois = contar_parametros_excessivos(
+                    arquivo.source_code)
+                delta_param = param_depois - param_antes
+
                 caos_neste_arquivo = 0
                 mensagens_caos = []
                 limpeza_neste_arquivo = 0
@@ -178,6 +208,14 @@ if __name__ == "__main__":
                 elif delta_mi > 0:
                     limpeza_neste_arquivo += round(delta_mi *
                                                    PESO_MANUTENIBILIDADE, 1)
+
+                # Análise de Parâmetros
+                if delta_param > 0:
+                    pontos = delta_param * PESO_PARAMETROS
+                    caos_neste_arquivo += pontos
+                    mensagens_caos.append(f"+{pontos} Parâmetros")
+                elif delta_param < 0:
+                    limpeza_neste_arquivo += abs(delta_param) * PESO_PARAMETROS
 
                 autor = commit.author.name
 
