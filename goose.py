@@ -66,6 +66,28 @@ def contar_parametros_excessivos(codigo: str, limite: int = 4) -> int:
                 excedentes += total - limite
     return excedentes
 
+
+def calcular_profundidade_maxima(codigo: str) -> int:
+    """Métrica 5: Profundidade máxima de aninhamento"""
+    if not codigo:
+        return 0
+    try:
+        arvore = ast.parse(codigo)
+    except SyntaxError:
+        return 0
+
+    blocos_aninhaveis = (ast.If, ast.For, ast.While, ast.Try, ast.With,
+                         ast.FunctionDef, ast.AsyncFunctionDef)
+
+    def profundidade(node, atual=0):
+        max_prof = atual
+        for filho in ast.iter_child_nodes(node):
+            prox = atual + 1 if isinstance(filho, blocos_aninhaveis) else atual
+            max_prof = max(max_prof, profundidade(filho, prox))
+        return max_prof
+
+    return profundidade(arvore)
+
 # --- 2. REGRAS DO JOGO ---
 
 
@@ -74,6 +96,7 @@ PESO_COMPLEXIDADE = 2
 PESO_TAMANHO = 1      # Código longo gera caos normal
 PESO_MANUTENIBILIDADE = 1  # Queda no MI = ganso espalhou confusão pelo arquivo todo
 PESO_PARAMETROS = 1       # Cada parâmetro extra é mais uma pena pro próximo dev
+PESO_PROFUNDIDADE = 2
 
 # --- 3. FILTRO ESTRITO DE ARQUIVOS ---
 
@@ -180,6 +203,11 @@ if __name__ == "__main__":
                     arquivo.source_code)
                 delta_param = param_depois - param_antes
 
+                prof_antes = calcular_profundidade_maxima(
+                    arquivo.source_code_before)
+                prof_depois = calcular_profundidade_maxima(arquivo.source_code)
+                delta_prof = prof_depois - prof_antes
+
                 caos_neste_arquivo = 0
                 mensagens_caos = []
                 limpeza_neste_arquivo = 0
@@ -216,6 +244,15 @@ if __name__ == "__main__":
                     mensagens_caos.append(f"+{pontos} Parâmetros")
                 elif delta_param < 0:
                     limpeza_neste_arquivo += abs(delta_param) * PESO_PARAMETROS
+
+                # Análise de Profundidade
+                if delta_prof > 0:
+                    pontos = delta_prof * PESO_PROFUNDIDADE
+                    caos_neste_arquivo += pontos
+                    mensagens_caos.append(f"+{pontos} Aninhamento")
+                elif delta_prof < 0:
+                    limpeza_neste_arquivo += abs(delta_prof) * \
+                        PESO_PROFUNDIDADE
 
                 autor = commit.author.name
 
