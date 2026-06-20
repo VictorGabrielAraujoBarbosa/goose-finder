@@ -7,11 +7,6 @@ import sys
 import io
 import ast
 
-# Garante que o stdout usa UTF-8 em qualquer sistema operacional
-if hasattr(sys.stdout, "buffer"):
-    sys.stdout = io.TextIOWrapper(
-        sys.stdout.buffer, encoding="utf-8", errors="replace")
-
 # --- 1. DETECTORES DE ANNOYANCE E LIMPEZA (Métricas) ---
 
 
@@ -167,6 +162,11 @@ def mostrar_charme_e_parsear_argumentos():
 
 
 if __name__ == "__main__":
+    # Garante que o stdout usa UTF-8 em qualquer sistema operacional
+    if hasattr(sys.stdout, "buffer"):
+        sys.stdout = io.TextIOWrapper(
+            sys.stdout.buffer, encoding="utf-8", errors="replace")
+
     repo_alvo = mostrar_charme_e_parsear_argumentos()
 
     # Estruturas de dados para o relatório
