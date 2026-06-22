@@ -12,14 +12,14 @@ from rich.progress import (
     TimeElapsedColumn,
 )
 
-from src.cli import configurar_stdout, parsear_argumentos
+from src.cli import configure_stdout, parser_arguments
 from src.analyzer import analisar_repositorio
 from src.reporter import imprimir_relatorio
 
 
 def main() -> None:
-    configurar_stdout()
-    target_repo = parsear_argumentos()
+    configure_stdout()
+    target_repo = parser_arguments()
 
     with Progress(
         SpinnerColumn(),
