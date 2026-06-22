@@ -5,6 +5,10 @@ Use:
     python goose_finder.py <path_or_repository> [options]
 """
 
+import sys
+
+from rich.console import Console
+from rich.panel import Panel
 from rich.progress import (
     Progress,
     SpinnerColumn,
@@ -31,7 +35,16 @@ def main() -> None:
             f"🦆 Investigating commits in [italic]{target_repo}[/italic]...",
             total=None,
         )
-        data = analyse_repository(target_repo, progress=progress, task_id=task)
+        try:
+            data = analyse_repository(target_repo, progress=progress, task_id=task)
+        except ValueError as exc:
+            Console(stderr=True).print(Panel(
+                f"[bold]{exc}[/bold]",
+                title="[bold red]❌ Invalid Repository[/bold red]",
+                border_style="red",
+                padding=(0, 2),
+            ))
+            sys.exit(1)
 
     print_report(data)
 
