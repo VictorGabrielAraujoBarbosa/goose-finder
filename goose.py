@@ -1,14 +1,11 @@
 from pydriller import Repository
 from radon.complexity import cc_visit
 from radon.raw import analyze
+from radon.metrics import mi_visit
 import argparse
 import sys
 import io
-
-# Garante que o stdout usa UTF-8 em qualquer sistema operacional
-if hasattr(sys.stdout, "buffer"):
-    sys.stdout = io.TextIOWrapper(
-        sys.stdout.buffer, encoding="utf-8", errors="replace")
+import ast
 
 # --- 1. DETECTORES DE ANNOYANCE E LIMPEZA (Métricas) ---
 
@@ -32,12 +29,69 @@ def calcular_tamanho(codigo: str) -> int:
     except Exception:
         return 0
 
+
+def calcular_manutenibilidade(codigo: str) -> float:
+    """Métrica 3: Índice de Manutenibilidade - MI (Ganso confunde o mapa todo)"""
+    if not codigo:
+        return 100.0
+    try:
+        return mi_visit(codigo, True)
+    except Exception:
+        return 100.0
+
+
+def contar_parametros_excessivos(codigo: str, limite: int = 4) -> int:
+    """Métrica 4: Excesso de parâmetros em funções (Ganso espalhando parâmetros)"""
+    if not codigo:
+        return 0
+    try:
+        arvore = ast.parse(codigo)
+    except SyntaxError:
+        return 0
+
+    excedentes = 0
+    for node in ast.walk(arvore):
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            total = len(node.args.args) + len(node.args.kwonlyargs)
+            if node.args.vararg:
+                total += 1
+            if node.args.kwarg:
+                total += 1
+            if total > limite:
+                excedentes += total - limite
+    return excedentes
+
+
+def calcular_profundidade_maxima(codigo: str) -> int:
+    """Métrica 5: Profundidade máxima de aninhamento"""
+    if not codigo:
+        return 0
+    try:
+        arvore = ast.parse(codigo)
+    except SyntaxError:
+        return 0
+
+    blocos_aninhaveis = (ast.If, ast.For, ast.While, ast.Try, ast.With,
+                         ast.FunctionDef, ast.AsyncFunctionDef)
+
+    def profundidade(node, atual=0):
+        max_prof = atual
+        for filho in ast.iter_child_nodes(node):
+            prox = atual + 1 if isinstance(filho, blocos_aninhaveis) else atual
+            max_prof = max(max_prof, profundidade(filho, prox))
+        return max_prof
+
+    return profundidade(arvore)
+
 # --- 2. REGRAS DO JOGO ---
 
 
 # Lógica confusa gera mais caos (ou mais pontos de limpeza se reduzida)
 PESO_COMPLEXIDADE = 2
 PESO_TAMANHO = 1      # Código longo gera caos normal
+PESO_MANUTENIBILIDADE = 1  # Queda no MI = ganso espalhou confusão pelo arquivo todo
+PESO_PARAMETROS = 1       # Cada parâmetro extra é mais uma pena pro próximo dev
+PESO_PROFUNDIDADE = 2
 
 # --- 3. FILTRO ESTRITO DE ARQUIVOS ---
 
@@ -99,7 +153,7 @@ def mostrar_charme_e_parsear_argumentos():
    O ganso vasculha o historico do git em busca de 'Annoyances' (code smells).
    \U0001fabf Gansos (Gooses): Devs que aumentam a complexidade ou tamanho do codigo.
    \U0001f9f9 Zeladores (Janitors): Devs que desatam os nos e limpam a baguna.
-        \n""")
+        """)
         sys.exit(0 if args.help else 1)
 
     return args.repo_alvo
@@ -108,6 +162,11 @@ def mostrar_charme_e_parsear_argumentos():
 
 
 if __name__ == "__main__":
+    # Garante que o stdout usa UTF-8 em qualquer sistema operacional
+    if hasattr(sys.stdout, "buffer"):
+        sys.stdout = io.TextIOWrapper(
+            sys.stdout.buffer, encoding="utf-8", errors="replace")
+
     repo_alvo = mostrar_charme_e_parsear_argumentos()
 
     # Estruturas de dados para o relatório
@@ -133,6 +192,22 @@ if __name__ == "__main__":
                 tam_depois = calcular_tamanho(arquivo.source_code)
                 delta_tam = tam_depois - tam_antes
 
+                mi_antes = calcular_manutenibilidade(
+                    arquivo.source_code_before)
+                mi_depois = calcular_manutenibilidade(arquivo.source_code)
+                delta_mi = mi_depois - mi_antes  # MI menor = pior
+
+                param_antes = contar_parametros_excessivos(
+                    arquivo.source_code_before)
+                param_depois = contar_parametros_excessivos(
+                    arquivo.source_code)
+                delta_param = param_depois - param_antes
+
+                prof_antes = calcular_profundidade_maxima(
+                    arquivo.source_code_before)
+                prof_depois = calcular_profundidade_maxima(arquivo.source_code)
+                delta_prof = prof_depois - prof_antes
+
                 caos_neste_arquivo = 0
                 mensagens_caos = []
                 limpeza_neste_arquivo = 0
@@ -152,6 +227,32 @@ if __name__ == "__main__":
                     mensagens_caos.append(f"+{pontos} LLOC")
                 elif delta_tam < 0:
                     limpeza_neste_arquivo += abs(delta_tam) * PESO_TAMANHO
+
+                # Análise de Manutenibilidade
+                if delta_mi < 0:
+                    pontos = round(abs(delta_mi) * PESO_MANUTENIBILIDADE, 1)
+                    caos_neste_arquivo += pontos
+                    mensagens_caos.append(f"+{pontos} Manutenibilidade")
+                elif delta_mi > 0:
+                    limpeza_neste_arquivo += round(delta_mi *
+                                                   PESO_MANUTENIBILIDADE, 1)
+
+                # Análise de Parâmetros
+                if delta_param > 0:
+                    pontos = delta_param * PESO_PARAMETROS
+                    caos_neste_arquivo += pontos
+                    mensagens_caos.append(f"+{pontos} Parâmetros")
+                elif delta_param < 0:
+                    limpeza_neste_arquivo += abs(delta_param) * PESO_PARAMETROS
+
+                # Análise de Profundidade
+                if delta_prof > 0:
+                    pontos = delta_prof * PESO_PROFUNDIDADE
+                    caos_neste_arquivo += pontos
+                    mensagens_caos.append(f"+{pontos} Aninhamento")
+                elif delta_prof < 0:
+                    limpeza_neste_arquivo += abs(delta_prof) * \
+                        PESO_PROFUNDIDADE
 
                 autor = commit.author.name
 
