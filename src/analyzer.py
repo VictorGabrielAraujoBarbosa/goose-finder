@@ -1,3 +1,4 @@
+from git.exc import InvalidGitRepositoryError
 from pydriller import Repository
 
 from src.config import (
@@ -33,7 +34,15 @@ def analyse_repository(target_repo: str, progress=None, task_id=None) -> dict:
     battlefields = {}
     annoyances_history = []
 
-    for commit in Repository(target_repo).traverse_commits():
+    try:
+        commits = list(Repository(target_repo).traverse_commits())
+    except InvalidGitRepositoryError:
+        raise ValueError(
+            f"'{target_repo}' is not a valid Git repository. "
+            "Make sure the path points to a directory that contains a '.git' folder."
+        )
+
+    for commit in commits:
         if progress is not None and task_id is not None:
             progress.advance(task_id)
 
