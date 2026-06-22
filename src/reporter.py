@@ -1,23 +1,129 @@
-def gerar_barra_heatmap(score: float, max_score: float, tamanho_barra: int = 20) -> str:
-    """Gera uma barra visual ASCII para representar o quão crítico é o arquivo."""
-    if max_score == 0:
-        return "[" + "░" * tamanho_barra + "]"
+"""
+Geração do relatório do Goose Finder usando Rich.
 
-    proporcao = score / max_score
-    blocos_cheios = int(proporcao * tamanho_barra)
-    blocos_vazios = tamanho_barra - blocos_cheios
+Recebe os dados brutos produzidos pelo analyzer e os apresenta
+ao usuário no terminal com tabelas, painéis e cores semânticas.
+Não conhece PyDriller, lógica de análise ou argumentos de CLI.
+"""
 
-    if proporcao > 0.7:
-        cor = "\033[91m"   # Vermelho
-    elif proporcao > 0.3:
-        cor = "\033[93m"   # Amarelo
-    else:
-        cor = "\033[90m"   # Cinza
+from rich.console import Console
+from rich.panel import Panel
+from rich.rule import Rule
+from rich.table import Table
+from rich.text import Text
 
-    reset = "\033[0m"
-    barra = f"{cor}{'█' * blocos_cheios}{'░' * blocos_vazios}{reset}"
-    return f"[{barra}]"
+# Instância central de console — compartilhada por todas as funções deste módulo
+console = Console()
 
+# Limiar de cores para densidade de caos (proporção em relação ao máximo)
+_LIMIAR_VERMELHO = 0.7
+_LIMIAR_AMARELO = 0.3
+
+
+# ---------------------------------------------------------------------------
+# Funções auxiliares privadas — constroem componentes Rich isoladamente
+# ---------------------------------------------------------------------------
+
+def _cor_densidade(proporcao: float) -> str:
+    """Retorna a cor semântica Rich para uma proporção de densidade."""
+    if proporcao > _LIMIAR_VERMELHO:
+        return "bold red"
+    if proporcao > _LIMIAR_AMARELO:
+        return "yellow"
+    return "dim"
+
+
+def _construir_tabela_batalhas(batalhas: list) -> Table:
+    """Constrói a tabela Rich de Top 5 Campos de Batalha."""
+    tabela = Table(
+        show_header=True,
+        header_style="bold cyan",
+        border_style="bright_black",
+        expand=False,
+        padding=(0, 1),
+    )
+    tabela.add_column("Arquivo", style="white", no_wrap=False, ratio=4)
+    tabela.add_column("Caos (pts)", justify="right", style="bold")
+    tabela.add_column("LLOC", justify="right")
+    tabela.add_column("Densidade", justify="right")
+    tabela.add_column("Intensidade", justify="left", min_width=22)
+
+    max_densidade = batalhas[0]['densidade'] if batalhas else 1.0
+
+    for b in batalhas:
+        proporcao = b['densidade'] / max_densidade if max_densidade else 0
+        cor = _cor_densidade(proporcao)
+
+        blocos_cheios = int(proporcao * 10)
+        blocos_vazios = 10 - blocos_cheios
+        barra = Text()
+        barra.append("█" * blocos_cheios, style=cor)
+        barra.append("░" * blocos_vazios, style="bright_black")
+
+        tabela.add_row(
+            Text(b['arquivo'], style=cor),
+            Text(str(b['caos']), style=cor),
+            str(b['tamanho']),
+            Text(f"{b['densidade']:.2f} pts/ln", style=cor),
+            barra,
+        )
+
+    return tabela
+
+
+def _construir_tabela_annoyances(annoyances: list) -> Table:
+    """Constrói a tabela Rich de Top 5 Maiores Annoyances."""
+    tabela = Table(
+        show_header=True,
+        header_style="bold cyan",
+        border_style="bright_black",
+        expand=False,
+        padding=(0, 1),
+    )
+    tabela.add_column("#", justify="center", style="bold", width=3)
+    tabela.add_column("Hash", style="magenta", width=8)
+    tabela.add_column("Autor", style="white")
+    tabela.add_column("Pontos", justify="right", style="bold red")
+    tabela.add_column("Arquivo", style="white")
+    tabela.add_column("Motivos", style="yellow")
+    tabela.add_column("Mensagem do Commit", style="dim", no_wrap=False)
+
+    for i, ann in enumerate(annoyances, 1):
+        tabela.add_row(
+            str(i),
+            ann['hash'],
+            ann['autor'],
+            f"+{ann['pontos']}",
+            ann['arquivo'],
+            ann['motivos'],
+            f"\"{ann['mensagem_commit']}\"",
+        )
+
+    return tabela
+
+
+def _construir_panel_hall_da_fama(goose: str, janitor: str) -> Panel:
+    """Constrói o painel Rich do Hall da Fama."""
+    conteudo = Text()
+    conteudo.append("  👑  MASTER GOOSE   ", style="bold red")
+    conteudo.append("(Maior causador de caos) : ", style="dim")
+    conteudo.append(f"{goose}\n", style="bold white")
+
+    conteudo.append("  🧹  MASTER JANITOR ", style="bold green")
+    conteudo.append("(Maior limpador)         : ", style="dim")
+    conteudo.append(f"{janitor}", style="bold white")
+
+    return Panel(
+        conteudo,
+        title="[bold yellow]🏆 Hall da Fama (e da Infâmia)[/bold yellow]",
+        border_style="yellow",
+        padding=(1, 2),
+    )
+
+
+# ---------------------------------------------------------------------------
+# Função pública principal
+# ---------------------------------------------------------------------------
 
 def imprimir_relatorio(dados: dict) -> None:
     """
@@ -33,12 +139,17 @@ def imprimir_relatorio(dados: dict) -> None:
     campos_de_batalha = dados['campos_de_batalha']
     historico_annoyances = dados['historico_annoyances']
 
-    print("\n" + "=" * 60)
-    print("📊 RELATÓRIO OFICIAL DO GANSO (GOOSE REPORT)")
-    print("=" * 60)
+    # Cabeçalho
+    console.print()
+    console.print(Panel(
+        "[bold]Peace was never an option.[/bold]",
+        title="[bold cyan]🪿  GOOSE REPORT[/bold cyan]",
+        border_style="cyan",
+        padding=(0, 2),
+    ))
 
     # --- Seção 1: Campos de Batalha ---
-    print("\n🔥 TOP 5 CAMPOS DE BATALHA (Arquivos mais problemáticos por tamanho)")
+    console.print(Rule("[bold red]🔥 Top 5 Campos de Batalha[/bold red]", style="red"))
 
     batalhas_ativas = []
     for arq, stats in campos_de_batalha.items():
@@ -52,38 +163,23 @@ def imprimir_relatorio(dados: dict) -> None:
             })
 
     if not batalhas_ativas:
-        print("Nenhum arquivo problemático encontrado. Paz reina.")
+        console.print("  [dim]Nenhum arquivo problemático encontrado. Paz reina. 🕊️[/dim]")
     else:
         batalhas_ativas.sort(key=lambda x: x['densidade'], reverse=True)
-        top_batalhas = batalhas_ativas[:5]
-        max_densidade = top_batalhas[0]['densidade']
-
-        for b in top_batalhas:
-            barra = gerar_barra_heatmap(b['densidade'], max_densidade)
-            print(f"{barra} {b['arquivo']}")
-            print(
-                f"    └─ Caos Histórico: {b['caos']} pts | "
-                f"LLOC Atual: {b['tamanho']} | "
-                f"Densidade: {b['densidade']:.2f} pts/linha\n"
-            )
+        console.print(_construir_tabela_batalhas(batalhas_ativas[:5]))
 
     # --- Seção 2: Maiores Annoyances ---
-    print("\n💥 TOP 5 MAIORES ANNOYANCES (Os piores commits)")
+    console.print()
+    console.print(Rule("[bold magenta]💥 Top 5 Maiores Annoyances[/bold magenta]", style="magenta"))
 
     if not historico_annoyances:
-        print("Nenhum ganso soltou um grasnado alto o suficiente.")
+        console.print("  [dim]Nenhum ganso soltou um grasnado alto o suficiente.[/dim]")
     else:
         historico_annoyances.sort(key=lambda x: x['pontos'], reverse=True)
-
-        for i, ann in enumerate(historico_annoyances[:5], 1):
-            print(f"{i}. 🪿 [+{ann['pontos']} pts] {ann['arquivo']}")
-            print(f"   Autor: {ann['autor']} | Commit: {ann['hash']}")
-            print(f"   Motivos: {ann['motivos']}")
-            print(f"   Mensagem: \"{ann['mensagem_commit']}\"\n")
+        console.print(_construir_tabela_annoyances(historico_annoyances[:5]))
 
     # --- Seção 3: Hall da Fama ---
-    print("🏆 HALL DA FAMA (E DA INFÂMIA)")
-
+    console.print()
     goose_vencedor = (
         max(placar_gooses.items(), key=lambda x: x[1])[0]
         if placar_gooses else "Ninguém"
@@ -92,7 +188,5 @@ def imprimir_relatorio(dados: dict) -> None:
         max(placar_janitors.items(), key=lambda x: x[1])[0]
         if placar_janitors else "Ninguém"
     )
-
-    print(f"👑 MASTER GOOSE (Maior causador de caos) : {goose_vencedor}")
-    print(f"🥇 MASTER JANITOR (Maior limpador)       : {janitor_vencedor}")
-    print("=" * 60 + "\n")
+    console.print(_construir_panel_hall_da_fama(goose_vencedor, janitor_vencedor))
+    console.print()
