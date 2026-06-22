@@ -14,7 +14,7 @@ from rich.progress import (
 
 from src.cli import configure_stdout, parser_arguments
 from src.analyzer import analyse_repository
-from src.reporter import imprimir_relatorio
+from src.reporter import print_report
 
 
 def main() -> None:
@@ -33,7 +33,7 @@ def main() -> None:
         )
         data = analyse_repository(target_repo, progress=progress, task_id=task)
 
-    imprimir_relatorio(data)
+    print_report(data)
 
 
 if __name__ == "__main__":
