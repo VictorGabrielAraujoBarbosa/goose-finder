@@ -112,7 +112,7 @@ def analyse_repository(target_repo: str, progress=None, task_id=None) -> dict:
                     'author': author,
                     'file': file.filename,
                     'points': chaos_on_this_file,
-                    'reasons': " e ".join(chaos_messages),
+                    'reasons': ", ".join(chaos_messages),
                     'commit_message': commit.msg.split('\n')[0],
                 })
 
