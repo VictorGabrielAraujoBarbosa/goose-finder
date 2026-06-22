@@ -4,92 +4,92 @@ from radon.complexity import cc_visit
 from radon.raw import analyze
 from radon.metrics import mi_visit
 
-from src.config import LIMITE_PARAMETROS
+from src.config import MAX_PARAMETERS
 
 
-def calcular_complexidade(codigo: str) -> int:
-    """Complexidade Ciclomática (Ganso confuso)."""
-    if not codigo:
+def calculate_complexity(code: str) -> int:
+    """Cyclomatic Complexity (confused goose)."""
+    if not code:
         return 0
     try:
-        return sum(b.complexity for b in cc_visit(codigo))
+        return sum(b.complexity for b in cc_visit(code))
     except Exception:
         return 0
 
 
-def calcular_tamanho(codigo: str) -> int:
-    """Linhas Lógicas de Código — LLOC (Ganso bloqueando o caminho)."""
-    if not codigo:
+def calculate_size(code: str) -> int:
+    """Logical Lines of Code — LLOC (goose blocking the path)."""
+    if not code:
         return 0
     try:
-        return analyze(codigo).lloc
+        return analyze(code).lloc
     except Exception:
         return 0
 
 
-def calcular_manutenibilidade(codigo: str) -> float:
-    """Índice de Manutenibilidade — MI (Ganso confunde o mapa todo)."""
-    if not codigo:
+def calculate_maintainability(code: str) -> float:
+    """Maintainability Index — MI (goose scrambling the whole map)."""
+    if not code:
         return 100.0
     try:
-        return mi_visit(codigo, True)
+        return mi_visit(code, True)
     except Exception:
         return 100.0
 
 
-def contar_parametros_excessivos(codigo: str, limite: int = LIMITE_PARAMETROS) -> int:
-    """Excesso de parâmetros em funções (Ganso espalhando parâmetros)."""
-    if not codigo:
+def count_excessive_parameters(code: str, limit: int = MAX_PARAMETERS) -> int:
+    """Excess parameters in functions (goose spreading parameters everywhere)."""
+    if not code:
         return 0
     try:
-        arvore = ast.parse(codigo)
+        tree = ast.parse(code)
     except SyntaxError:
         return 0
 
-    excedentes = 0
-    for node in ast.walk(arvore):
+    excess = 0
+    for node in ast.walk(tree):
         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
             total = len(node.args.args) + len(node.args.kwonlyargs)
             if node.args.vararg:
                 total += 1
             if node.args.kwarg:
                 total += 1
-            if total > limite:
-                excedentes += total - limite
-    return excedentes
+            if total > limit:
+                excess += total - limit
+    return excess
 
 
-def calcular_profundidade_maxima(codigo: str) -> int:
-    """Profundidade máxima de aninhamento."""
-    if not codigo:
+def calculate_max_depth(code: str) -> int:
+    """Maximum nesting depth."""
+    if not code:
         return 0
     try:
-        arvore = ast.parse(codigo)
+        tree = ast.parse(code)
     except SyntaxError:
         return 0
 
-    blocos_aninhaveis = (
+    nestable_blocks = (
         ast.If, ast.For, ast.While, ast.Try, ast.With,
         ast.FunctionDef, ast.AsyncFunctionDef
     )
 
-    def profundidade(node, atual=0):
-        max_prof = atual
-        for filho in ast.iter_child_nodes(node):
-            prox = atual + 1 if isinstance(filho, blocos_aninhaveis) else atual
-            max_prof = max(max_prof, profundidade(filho, prox))
-        return max_prof
+    def depth(node, current=0):
+        max_depth = current
+        for child in ast.iter_child_nodes(node):
+            next_level = current + 1 if isinstance(child, nestable_blocks) else current
+            max_depth = max(max_depth, depth(child, next_level))
+        return max_depth
 
-    return profundidade(arvore)
+    return depth(tree)
 
 
-def eh_arquivo_alvo(arquivo) -> bool:
-    """Garante que só vamos processar arquivos .py que foram MODIFICADOS."""
-    if arquivo.filename is None:
+def is_target_file(file) -> bool:
+    """Ensures we only process .py files that were MODIFIED."""
+    if file.filename is None:
         return False
 
     return (
-        arquivo.filename.endswith('.py') and
-        arquivo.source_code is not None and
-        arquivo.source_code_before is not None
+        file.filename.endswith('.py') and
+        file.source_code is not None and
+        file.source_code_before is not None
     )

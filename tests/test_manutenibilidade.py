@@ -1,19 +1,19 @@
 import pytest
-from src.metrics import calcular_manutenibilidade
+from src.metrics import calculate_maintainability
 
 
-class TestCalcularManutenibilidade:
+class TestCalculateMaintainability:
 
-    def test_MI01_funcao_simples_retorna_float(self):
-        """MI-01: Função simples deve retornar float no intervalo [0, 100]."""
-        resultado = calcular_manutenibilidade("def foo(): pass")
-        assert isinstance(resultado, float)
-        assert 0.0 <= resultado <= 100.0
+    def test_MI01_simple_function_returns_float(self):
+        """MI-01: Simple function should return a float in [0, 100]."""
+        result = calculate_maintainability("def foo(): pass")
+        assert isinstance(result, float)
+        assert 0.0 <= result <= 100.0
 
-    def test_MI02_codigo_complexo_tem_mi_menor(self):
-        """MI-02: Código complexo deve ter MI menor que código simples."""
-        simples = "def foo(): pass"
-        complexo = (
+    def test_MI02_complex_code_has_lower_mi(self):
+        """MI-02: Complex code should have a lower MI than simple code."""
+        simple = "def foo(): pass"
+        complex_code = (
             "def foo(a, b, c, d, e):\n"
             "    for i in range(100):\n"
             "        if i % 2 == 0:\n"
@@ -22,16 +22,16 @@ class TestCalcularManutenibilidade:
             "                    b = c + d * e\n"
             "    return b\n" * 5
         )
-        assert calcular_manutenibilidade(complexo) < calcular_manutenibilidade(simples)
+        assert calculate_maintainability(complex_code) < calculate_maintainability(simple)
 
-    def test_MI03_string_vazia_retorna_100(self):
-        """MI-03: String vazia deve retornar 100.0 (valor padrão)."""
-        assert calcular_manutenibilidade("") == 100.0
+    def test_MI03_empty_string_returns_100(self):
+        """MI-03: Empty string should return 100.0 (default value)."""
+        assert calculate_maintainability("") == 100.0
 
-    def test_MI04_none_retorna_100(self):
-        """MI-04: None deve retornar 100.0 sem levantar exceção."""
-        assert calcular_manutenibilidade(None) == 100.0
+    def test_MI04_none_returns_100(self):
+        """MI-04: None should return 100.0 without raising an exception."""
+        assert calculate_maintainability(None) == 100.0
 
-    def test_MI05_sintaxe_invalida_retorna_100(self):
-        """MI-05: Código com erro de sintaxe deve retornar 100.0."""
-        assert calcular_manutenibilidade("def foo(:") == 100.0
+    def test_MI05_invalid_syntax_returns_100(self):
+        """MI-05: Code with syntax error should return 100.0."""
+        assert calculate_maintainability("def foo(:") == 100.0

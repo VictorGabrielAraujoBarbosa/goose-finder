@@ -1,10 +1,10 @@
 VERSION = "1.0.0"
 
-# Pesos das métricas para cálculo de caos / limpeza
+# Metric weights for chaos / cleanup calculation
 PESO_TAMANHO = 1
 PESO_PARAMETROS = 1
 PESO_COMPLEXIDADE = 2
 PESO_PROFUNDIDADE = 2
 PESO_MANUTENIBILIDADE = 1
 
-LIMITE_PARAMETROS = 4
+MAX_PARAMETERS = 4

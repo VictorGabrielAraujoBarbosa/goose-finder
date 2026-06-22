@@ -1,29 +1,29 @@
 import pytest
-from src.metrics import calcular_tamanho
+from src.metrics import calculate_size
 
 
-class TestCalcularTamanho:
+class TestCalculateSize:
 
-    def test_TAM01_tres_instrucoes_logicas(self):
-        """TAM-01: Três atribuições devem resultar em LLOC == 3."""
-        codigo = "x = 1\ny = 2\nz = x + y"
-        assert calcular_tamanho(codigo) == 3
+    def test_TAM01_three_logical_statements(self):
+        """TAM-01: Three assignments should result in LLOC == 3."""
+        code = "x = 1\ny = 2\nz = x + y"
+        assert calculate_size(code) == 3
 
-    def test_TAM02_comentarios_e_linhas_em_branco_ignorados(self):
-        """TAM-02: Comentários e linhas em branco não contam como LLOC."""
-        codigo = "# comentário\n\nx = 1\n\n# outro\ny = 2"
-        resultado = calcular_tamanho(codigo)
-        assert resultado == 2
+    def test_TAM02_comments_and_blank_lines_ignored(self):
+        """TAM-02: Comments and blank lines do not count as LLOC."""
+        code = "# comment\n\nx = 1\n\n# another\ny = 2"
+        result = calculate_size(code)
+        assert result == 2
 
-    def test_TAM03_string_vazia_retorna_zero(self):
-        """TAM-03: String vazia deve retornar 0."""
-        assert calcular_tamanho("") == 0
+    def test_TAM03_empty_string_returns_zero(self):
+        """TAM-03: Empty string should return 0."""
+        assert calculate_size("") == 0
 
-    def test_TAM04_apenas_comentarios_retorna_zero(self):
-        """TAM-04: Código com só comentários deve retornar 0."""
-        codigo = "# linha 1\n# linha 2\n# linha 3"
-        assert calcular_tamanho(codigo) == 0
+    def test_TAM04_only_comments_returns_zero(self):
+        """TAM-04: Code with only comments should return 0."""
+        code = "# line 1\n# line 2\n# line 3"
+        assert calculate_size(code) == 0
 
-    def test_TAM05_sintaxe_invalida_retorna_zero(self):
-        """TAM-05: Código sintaticamente inválido deve retornar 0."""
-        assert calcular_tamanho("def foo(:") == 0
+    def test_TAM05_invalid_syntax_returns_zero(self):
+        """TAM-05: Syntactically invalid code should return 0."""
+        assert calculate_size("def foo(:") == 0

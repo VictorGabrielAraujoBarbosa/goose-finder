@@ -9,129 +9,129 @@ from src.config import (
 )
 
 from src.metrics import (
-    calcular_complexidade,
-    calcular_tamanho,
-    calcular_manutenibilidade,
-    contar_parametros_excessivos,
-    calcular_profundidade_maxima,
-    eh_arquivo_alvo,
+    calculate_complexity,
+    calculate_size,
+    calculate_maintainability,
+    count_excessive_parameters,
+    calculate_max_depth,
+    is_target_file,
 )
 
 
-def analisar_repositorio(repo_alvo: str, progress=None, task_id=None) -> dict:
+def analyse_repository(target_repo: str, progress=None, task_id=None) -> dict:
     """
-    Percorre todos os commits do repositório e acumula os dados de análise.
+    It iterates through all commits in the repository and accumulates the analysis data.
 
-    Retorna um dicionário com as seguintes chaves:
-        - 'placar_gooses'       : { autor: pontos_totais }
-        - 'placar_janitors'     : { autor: pontos_totais }
-        - 'campos_de_batalha'   : { arquivo: {'caos_acumulado': int, 'tamanho_final': int} }
-        - 'historico_annoyances': [ { hash, autor, arquivo, pontos, motivos, mensagem_commit } ]
+    It returns a dictionary with the following keys:
+        - 'gooses_score' : { author: total_points }
+        - 'janitors_score' : { author: total_points }
+        - 'battlefields' : { file: {'accumulated_chaos': int, 'final_size': int} }
+        - 'annoyances_history': [ { hash, author, file, points, reasons, commit_message } ]
     """
-    placar_gooses = {}
-    placar_janitors = {}
-    campos_de_batalha = {}
-    historico_annoyances = []
+    gooses_score = {}
+    janitors_score = {}
+    battlefields = {}
+    annoyances_history = []
 
-    for commit in Repository(repo_alvo).traverse_commits():
+    for commit in Repository(target_repo).traverse_commits():
         if progress is not None and task_id is not None:
             progress.advance(task_id)
 
-        for arquivo in commit.modified_files:
+        for file in commit.modified_files:
 
-            if not eh_arquivo_alvo(arquivo):
+            if not is_target_file(file):
                 continue
 
-            # --- Calcula deltas de cada métrica ---
-            delta_cc = calcular_complexidade(arquivo.source_code) - calcular_complexidade(arquivo.source_code_before)
+            # Calculates deltas for each metric
+            delta_cc = calculate_complexity(file.source_code) - calculate_complexity(file.source_code_before)
 
-            tam_depois = calcular_tamanho(arquivo.source_code)
-            delta_tam = tam_depois - calcular_tamanho(arquivo.source_code_before)
+            len_after = calculate_size(file.source_code)
+            delta_len = len_after - calculate_size(file.source_code_before)
 
-            delta_mi = (calcular_manutenibilidade(arquivo.source_code) -
-                        calcular_manutenibilidade(arquivo.source_code_before))
+            delta_mi = (calculate_maintainability(file.source_code) -
+                        calculate_maintainability(file.source_code_before))
 
-            delta_param = (contar_parametros_excessivos(arquivo.source_code) -
-                           contar_parametros_excessivos(arquivo.source_code_before))
+            delta_param = (count_excessive_parameters(file.source_code) -
+                           count_excessive_parameters(file.source_code_before))
 
-            delta_prof = (calcular_profundidade_maxima(arquivo.source_code) -
-                          calcular_profundidade_maxima(arquivo.source_code_before))
+            delta_prof = (calculate_max_depth(file.source_code) -
+                          calculate_max_depth(file.source_code_before))
 
-            mensagens_caos = []
-            caos_neste_arquivo = 0
-            limpeza_neste_arquivo = 0
+            chaos_messages = []
+            chaos_on_this_file = 0
+            cleanup_on_this_file = 0
 
-            # Análise de Complexidade
+            # Complexity Analysis
             if delta_cc > 0:
-                pontos = delta_cc * PESO_COMPLEXIDADE
-                caos_neste_arquivo += pontos
-                mensagens_caos.append(f"+{pontos} Complexidade")
+                points = delta_cc * PESO_COMPLEXIDADE
+                chaos_on_this_file += points
+                chaos_messages.append(f"+{points} Complexity")
             elif delta_cc < 0:
-                limpeza_neste_arquivo += abs(delta_cc) * PESO_COMPLEXIDADE
+                cleanup_on_this_file += abs(delta_cc) * PESO_COMPLEXIDADE
 
-            # Análise de Tamanho
-            if delta_tam > 0:
-                pontos = delta_tam * PESO_TAMANHO
-                caos_neste_arquivo += pontos
-                mensagens_caos.append(f"+{pontos} LLOC")
-            elif delta_tam < 0:
-                limpeza_neste_arquivo += abs(delta_tam) * PESO_TAMANHO
+            # Size Analysis
+            if delta_len > 0:
+                points = delta_len * PESO_TAMANHO
+                chaos_on_this_file += points
+                chaos_messages.append(f"+{points} LLOC")
+            elif delta_len < 0:
+                cleanup_on_this_file += abs(delta_len) * PESO_TAMANHO
 
-            # Análise de Manutenibilidade (MI menor = pior)
+            # Maintainability Analysis (lower MI = worse)
             if delta_mi < 0:
-                pontos = round(abs(delta_mi) * PESO_MANUTENIBILIDADE, 1)
-                caos_neste_arquivo += pontos
-                mensagens_caos.append(f"+{pontos} Manutenibilidade")
+                points = round(abs(delta_mi) * PESO_MANUTENIBILIDADE, 1)
+                chaos_on_this_file += points
+                chaos_messages.append(f"+{points} Maintainability")
             elif delta_mi > 0:
-                limpeza_neste_arquivo += round(delta_mi * PESO_MANUTENIBILIDADE, 1)
+                cleanup_on_this_file += round(delta_mi * PESO_MANUTENIBILIDADE, 1)
 
-            # Análise de Parâmetros
+            # Parameter Analysis
             if delta_param > 0:
-                pontos = delta_param * PESO_PARAMETROS
-                caos_neste_arquivo += pontos
-                mensagens_caos.append(f"+{pontos} Parâmetros")
+                points = delta_param * PESO_PARAMETROS
+                chaos_on_this_file += points
+                chaos_messages.append(f"+{points} Parameters")
             elif delta_param < 0:
-                limpeza_neste_arquivo += abs(delta_param) * PESO_PARAMETROS
+                cleanup_on_this_file += abs(delta_param) * PESO_PARAMETROS
 
-            # Análise de Profundidade
+            # In-depth Analysis
             if delta_prof > 0:
-                pontos = delta_prof * PESO_PROFUNDIDADE
-                caos_neste_arquivo += pontos
-                mensagens_caos.append(f"+{pontos} Aninhamento")
+                points = delta_prof * PESO_PROFUNDIDADE
+                chaos_on_this_file += points
+                chaos_messages.append(f"+{points} Nesting")
             elif delta_prof < 0:
-                limpeza_neste_arquivo += abs(delta_prof) * PESO_PROFUNDIDADE
+                cleanup_on_this_file += abs(delta_prof) * PESO_PROFUNDIDADE
 
-            autor = commit.author.name
+            author = commit.author.name
 
-            # Acumula dados de caos
-            if caos_neste_arquivo > 0:
-                placar_gooses[autor] = placar_gooses.get(autor, 0) + caos_neste_arquivo
+            # Accumulates data on chaos.
+            if chaos_on_this_file > 0:
+                gooses_score[author] = gooses_score.get(author, 0) + chaos_on_this_file
 
-                historico_annoyances.append({
+                annoyances_history.append({
                     'hash': commit.hash[:7],
-                    'autor': autor,
-                    'arquivo': arquivo.filename,
-                    'pontos': caos_neste_arquivo,
-                    'motivos': " e ".join(mensagens_caos),
-                    'mensagem_commit': commit.msg.split('\n')[0],
+                    'author': author,
+                    'file': file.filename,
+                    'points': chaos_on_this_file,
+                    'reasons': ", ".join(chaos_messages),
+                    'commit_message': commit.msg.split('\n')[0],
                 })
 
-                if arquivo.filename not in campos_de_batalha:
-                    campos_de_batalha[arquivo.filename] = {
-                        'caos_acumulado': 0, 'tamanho_final': 0}
-                campos_de_batalha[arquivo.filename]['caos_acumulado'] += caos_neste_arquivo
+                if file.filename not in battlefields:
+                    battlefields[file.filename] = {
+                        'accumulated_chaos': 0, 'final_size': 0}
+                battlefields[file.filename]['accumulated_chaos'] += chaos_on_this_file
 
             # Acumula dados de limpeza
-            if limpeza_neste_arquivo > 0:
-                placar_janitors[autor] = placar_janitors.get(autor, 0) + limpeza_neste_arquivo
+            if cleanup_on_this_file > 0:
+                janitors_score[author] = janitors_score.get(author, 0) + cleanup_on_this_file
 
-            # Atualiza o tamanho final do arquivo para o heatmap
-            if arquivo.filename in campos_de_batalha:
-                campos_de_batalha[arquivo.filename]['tamanho_final'] = tam_depois
+            # Atualiza o tamanho final do file para o heatmap
+            if file.filename in battlefields:
+                battlefields[file.filename]['final_size'] = len_after
 
     return {
-        'placar_gooses': placar_gooses,
-        'placar_janitors': placar_janitors,
-        'campos_de_batalha': campos_de_batalha,
-        'historico_annoyances': historico_annoyances,
+        'gooses_score': gooses_score,
+        'janitors_score': janitors_score,
+        'battlefields': battlefields,
+        'annoyances_history': annoyances_history,
     }
