@@ -93,7 +93,31 @@ PESO_MANUTENIBILIDADE = 1  # Queda no MI = ganso espalhou confusão pelo arquivo
 PESO_PARAMETROS = 1       # Cada parâmetro extra é mais uma pena pro próximo dev
 PESO_PROFUNDIDADE = 2
 
-# --- 3. FILTRO ESTRITO DE ARQUIVOS ---
+# --- 3. GERADOR DE BARRA HEATMAP ---
+
+
+def gerar_barra_heatmap(score: float, max_score: float, tamanho_barra: int = 20) -> str:
+    """Gera uma barra visual ASCII para representar o quão crítico é o arquivo."""
+    if max_score == 0:
+        return "[" + "░"*tamanho_barra + "]"
+
+    proporcao = score / max_score
+    blocos_cheios = int(proporcao * tamanho_barra)
+    blocos_vazios = tamanho_barra - blocos_cheios
+
+    if proporcao > 0.7:
+        cor = "\033[91m"  # Vermelho
+    elif proporcao > 0.3:
+        cor = "\033[93m"  # Amarelo
+    else:
+        cor = "\033[90m"  # Cinza
+
+    reset = "\033[0m"
+    barra = f"{cor}{'█'*blocos_cheios}{'░'*blocos_vazios}{reset}"
+    return f"[{barra}]"
+
+
+# --- 4. FILTRO ESTRITO DE ARQUIVOS ---
 
 
 def eh_arquivo_alvo(arquivo) -> bool:
@@ -285,26 +309,6 @@ if __name__ == "__main__":
                     campos_de_batalha[arquivo.filename]['tamanho_final'] = tam_depois
 
     # --- 6. GERAÇÃO DO RELATÓRIO (Telas Finais) ---
-
-    def gerar_barra_heatmap(score: float, max_score: float, tamanho_barra: int = 20) -> str:
-        """Gera uma barra visual ASCII para representar o quão crítico é o arquivo."""
-        if max_score == 0:
-            return "[░"*tamanho_barra + "]"
-
-        proporcao = score / max_score
-        blocos_cheios = int(proporcao * tamanho_barra)
-        blocos_vazios = tamanho_barra - blocos_cheios
-
-        if proporcao > 0.7:
-            cor = "\033[91m"  # Vermelho
-        elif proporcao > 0.3:
-            cor = "\033[93m"  # Amarelo
-        else:
-            cor = "\033[90m"  # Cinza
-
-        reset = "\033[0m"
-        barra = f"{cor}{'█'*blocos_cheios}{'░'*blocos_vazios}{reset}"
-        return f"[{barra}]"
 
     print("\n" + "="*60)
     print("📊 RELATÓRIO OFICIAL DO GANSO (GOOSE REPORT)")
