@@ -85,7 +85,7 @@ def _construir_tabela_annoyances(annoyances: list) -> Table:
     tabela.add_column("Autor", style="white")
     tabela.add_column("Pontos", justify="right", style="bold red")
     tabela.add_column("Arquivo", style="white")
-    tabela.add_column("Motivos", style="yellow")
+    tabela.add_column("reasons", style="yellow")
     tabela.add_column("Mensagem do Commit", style="dim", no_wrap=False)
 
     for i, ann in enumerate(annoyances, 1):
@@ -95,8 +95,8 @@ def _construir_tabela_annoyances(annoyances: list) -> Table:
             ann['autor'],
             f"+{ann['pontos']}",
             ann['arquivo'],
-            ann['motivos'],
-            f"\"{ann['mensagem_commit']}\"",
+            ann['reasons'],
+            f"\"{ann['commit_message']}\"",
         )
 
     return tabela
@@ -137,7 +137,7 @@ def imprimir_relatorio(dados: dict) -> None:
     placar_gooses = dados['placar_gooses']
     placar_janitors = dados['placar_janitors']
     campos_de_batalha = dados['campos_de_batalha']
-    historico_annoyances = dados['historico_annoyances']
+    annoyances_history = dados['annoyances_history']
 
     # Cabeçalho
     console.print()
@@ -153,13 +153,13 @@ def imprimir_relatorio(dados: dict) -> None:
 
     batalhas_ativas = []
     for arq, stats in campos_de_batalha.items():
-        if stats['tamanho_final'] > 0:
-            densidade = stats['caos_acumulado'] / stats['tamanho_final']
+        if stats['final_size'] > 0:
+            densidade = stats['accumulated_chaos'] / stats['final_size']
             batalhas_ativas.append({
                 'arquivo': arq,
                 'densidade': densidade,
-                'caos': stats['caos_acumulado'],
-                'tamanho': stats['tamanho_final'],
+                'caos': stats['accumulated_chaos'],
+                'tamanho': stats['final_size'],
             })
 
     if not batalhas_ativas:
@@ -172,11 +172,11 @@ def imprimir_relatorio(dados: dict) -> None:
     console.print()
     console.print(Rule("[bold magenta]💥 Top 5 Maiores Annoyances[/bold magenta]", style="magenta"))
 
-    if not historico_annoyances:
+    if not annoyances_history:
         console.print("  [dim]Nenhum ganso soltou um grasnado alto o suficiente.[/dim]")
     else:
-        historico_annoyances.sort(key=lambda x: x['pontos'], reverse=True)
-        console.print(_construir_tabela_annoyances(historico_annoyances[:5]))
+        annoyances_history.sort(key=lambda x: x['pontos'], reverse=True)
+        console.print(_construir_tabela_annoyances(annoyances_history[:5]))
 
     # --- Seção 3: Hall da Fama ---
     console.print()

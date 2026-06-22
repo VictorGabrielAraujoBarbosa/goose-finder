@@ -13,7 +13,7 @@ from rich.progress import (
 )
 
 from src.cli import configure_stdout, parser_arguments
-from src.analyzer import analisar_repositorio
+from src.analyzer import analyse_repository
 from src.reporter import imprimir_relatorio
 
 
@@ -31,7 +31,7 @@ def main() -> None:
             f"🦆 Investigating commits in [italic]{target_repo}[/italic]...",
             total=None,
         )
-        data = analisar_repositorio(target_repo, progress=progress, task_id=task)
+        data = analyse_repository(target_repo, progress=progress, task_id=task)
 
     imprimir_relatorio(data)
 
