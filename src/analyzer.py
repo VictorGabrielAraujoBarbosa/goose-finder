@@ -9,12 +9,12 @@ from src.config import (
 )
 
 from src.metrics import (
-    calcular_complexidade,
-    calcular_tamanho,
-    calcular_manutenibilidade,
-    contar_parametros_excessivos,
-    calcular_profundidade_maxima,
-    eh_arquivo_alvo,
+    calculate_complexity,
+    calculate_size,
+    calculate_maintainability,
+    count_excessive_parameters,
+    calculate_max_depth,
+    is_target_file,
 )
 
 
@@ -39,23 +39,23 @@ def analyse_repository(target_repo: str, progress=None, task_id=None) -> dict:
 
         for file in commit.modified_files:
 
-            if not eh_arquivo_alvo(file):
+            if not is_target_file(file):
                 continue
 
             # Calculates deltas for each metric
-            delta_cc = calcular_complexidade(file.source_code) - calcular_complexidade(file.source_code_before)
+            delta_cc = calculate_complexity(file.source_code) - calculate_complexity(file.source_code_before)
 
-            len_after = calcular_tamanho(file.source_code)
-            delta_len = len_after - calcular_tamanho(file.source_code_before)
+            len_after = calculate_size(file.source_code)
+            delta_len = len_after - calculate_size(file.source_code_before)
 
-            delta_mi = (calcular_manutenibilidade(file.source_code) -
-                        calcular_manutenibilidade(file.source_code_before))
+            delta_mi = (calculate_maintainability(file.source_code) -
+                        calculate_maintainability(file.source_code_before))
 
-            delta_param = (contar_parametros_excessivos(file.source_code) -
-                           contar_parametros_excessivos(file.source_code_before))
+            delta_param = (count_excessive_parameters(file.source_code) -
+                           count_excessive_parameters(file.source_code_before))
 
-            delta_prof = (calcular_profundidade_maxima(file.source_code) -
-                          calcular_profundidade_maxima(file.source_code_before))
+            delta_prof = (calculate_max_depth(file.source_code) -
+                          calculate_max_depth(file.source_code_before))
 
             chaos_messages = []
             chaos_on_this_file = 0
