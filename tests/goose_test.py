@@ -3,15 +3,15 @@ import sys
 import pytest
 from unittest.mock import MagicMock
 
-from src.goose import (
+from src.metrics import (
     calcular_complexidade,
     calcular_tamanho,
     calcular_manutenibilidade,
     contar_parametros_excessivos,
     calcular_profundidade_maxima,
     eh_arquivo_alvo,
-    gerar_barra_heatmap,
 )
+from src.reporter import gerar_barra_heatmap
 
 
 def _arquivo_mock(filename="foo.py", source_code="x = 1", source_code_before="x = 0"):
