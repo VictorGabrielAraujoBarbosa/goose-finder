@@ -18,7 +18,7 @@ from src.metrics import (
 )
 
 
-def analisar_repositorio(repo_alvo: str) -> dict:
+def analisar_repositorio(repo_alvo: str, progress=None, task_id=None) -> dict:
     """
     Percorre todos os commits do repositório e acumula os dados de análise.
 
@@ -34,6 +34,9 @@ def analisar_repositorio(repo_alvo: str) -> dict:
     historico_annoyances = []
 
     for commit in Repository(repo_alvo).traverse_commits():
+        if progress is not None and task_id is not None:
+            progress.advance(task_id)
+
         for arquivo in commit.modified_files:
 
             if not eh_arquivo_alvo(arquivo):
