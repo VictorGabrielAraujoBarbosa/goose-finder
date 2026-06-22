@@ -1,8 +1,8 @@
 """
-Ponto de entrada do Goose Finder.
+Entry point of Goose Finder.
 
-Uso:
-    python goose_finder.py <caminho_do_repositorio> [opções]
+Use:
+    python goose_finder.py <path_or_repository> [options]
 """
 
 from rich.progress import (
@@ -19,7 +19,7 @@ from src.reporter import imprimir_relatorio
 
 def main() -> None:
     configurar_stdout()
-    repo_alvo = parsear_argumentos()
+    target_repo = parsear_argumentos()
 
     with Progress(
         SpinnerColumn(),
@@ -28,12 +28,12 @@ def main() -> None:
         transient=True,
     ) as progress:
         task = progress.add_task(
-            f"🦆 Investigando commits em [italic]{repo_alvo}[/italic]...",
+            f"🦆 Investigating commits in [italic]{target_repo}[/italic]...",
             total=None,
         )
-        dados = analisar_repositorio(repo_alvo, progress=progress, task_id=task)
+        data = analisar_repositorio(target_repo, progress=progress, task_id=task)
 
-    imprimir_relatorio(dados)
+    imprimir_relatorio(data)
 
 
 if __name__ == "__main__":
