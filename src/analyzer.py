@@ -1,5 +1,6 @@
 from git.exc import InvalidGitRepositoryError
 from pydriller import Repository
+from src.config import load_exclusion_patterns, should_ignore
 
 from src.config import (
     PESO_COMPLEXIDADE,
@@ -144,3 +145,26 @@ def analyse_repository(target_repo: str, progress=None, task_id=None) -> dict:
         'battlefields': battlefields,
         'annoyances_history': annoyances_history,
     }
+
+
+
+def analyze_files(file_paths: list, exclusion_patterns: list = None) -> list:
+    """
+    Filtra arquivos removendo aqueles que correspondem aos padrões de exclusão.
+    
+    Args:
+        file_paths: Lista de caminhos de arquivo para analisar
+        exclusion_patterns: Padrões de exclusão personalizados (opcional)
+        
+    Returns:
+        Lista de arquivos que não devem ser ignorados
+    """
+    if exclusion_patterns is None:
+        exclusion_patterns = load_exclusion_patterns()
+    
+    filtered_files = []
+    for file_path in file_paths:
+        if not should_ignore(file_path, exclusion_patterns):
+            filtered_files.append(file_path)
+    
+    return filtered_files
