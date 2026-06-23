@@ -95,8 +95,9 @@ python goose_finder.py <path_to_repo_or_url> [options]
 | **Option** | `-h, --help` | Shows help and a "honk" for you. |
 | **Option** | `-v, --version` | Shows the current version of the tool. |
 
+---
 
-### Contributing
+## Contributing
 
 Thank you for your interest! Check [the contributing guide](CONTRIBUTING.md)
 
