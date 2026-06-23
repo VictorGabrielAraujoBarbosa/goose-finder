@@ -1,5 +1,7 @@
 from git.exc import InvalidGitRepositoryError
 from pydriller import Repository
+from src.config import load_exclusion_patterns, should_ignore
+from src.extensibility import get_default_detectors, LinearCostFunction
 
 from src.config import (
     PESO_COMPLEXIDADE,
@@ -137,6 +139,128 @@ def analyse_repository(target_repo: str, progress=None, task_id=None) -> dict:
             # Atualiza o tamanho final do file para o heatmap
             if file.filename in battlefields:
                 battlefields[file.filename]['final_size'] = len_after
+
+    return {
+        'gooses_score': gooses_score,
+        'janitors_score': janitors_score,
+        'battlefields': battlefields,
+        'annoyances_history': annoyances_history,
+    }
+
+
+
+def analyze_files(file_paths: list, exclusion_patterns: list = None) -> list:
+    """
+    Filtra arquivos removendo aqueles que correspondem aos padrões de exclusão.
+    
+    Args:
+        file_paths: Lista de caminhos de arquivo para analisar
+        exclusion_patterns: Padrões de exclusão personalizados (opcional)
+        
+    Returns:
+        Lista de arquivos que não devem ser ignorados
+    """
+    if exclusion_patterns is None:
+        exclusion_patterns = load_exclusion_patterns()
+    
+    filtered_files = []
+    for file_path in file_paths:
+        if not should_ignore(file_path, exclusion_patterns):
+            filtered_files.append(file_path)
+    
+    return filtered_files
+
+
+
+def analyse_repository_extensible(
+    target_repo: str,
+    progress=None,
+    task_id=None,
+    detectors=None,
+    cost_function=None
+) -> dict:
+    """
+    Versão extensível do analyse_repository que permite customização.
+    
+    Permite que usuários forneçam:
+    - Detectores de code smells personalizados
+    - Função de custo customizada
+    
+"""
+    
+    # Usa detectores padrão se não fornecidos
+    if detectors is None:
+        detectors = get_default_detectors()
+    
+    # Usa função de custo padrão se não fornecida
+    if cost_function is None:
+        cost_function = LinearCostFunction()
+    
+    gooses_score = {}
+    janitors_score = {}
+    battlefields = {}
+    annoyances_history = []
+
+    try:
+        commits = list(Repository(target_repo).traverse_commits())
+    except InvalidGitRepositoryError:
+        raise ValueError(
+            f"'{target_repo}' is not a valid Git repository. "
+            "Make sure the path points to a directory that contains a '.git' folder."
+        )
+
+    for commit in commits:
+        if progress is not None and task_id is not None:
+            progress.advance(task_id)
+
+        for file in commit.modified_files:
+            if not is_target_file(file):
+                continue
+
+            # Usa os detectores extensíveis
+            deltas = []
+            for detector in detectors:
+                delta, description = detector.calculate_delta(
+                    file.source_code_before or "",
+                    file.source_code or ""
+                )
+                if delta != 0:
+                    deltas.append((delta, detector.get_weight(), description))
+            
+            if not deltas:
+                continue
+            
+            # Calcula custo usando a função de custo
+            chaos, cleanup, chaos_messages = cost_function.calculate_cost(deltas)
+            
+            author = commit.author.name
+
+            # Acumula dados de caos
+            if chaos > 0:
+                gooses_score[author] = gooses_score.get(author, 0) + chaos
+
+                annoyances_history.append({
+                    'hash': commit.hash[:7],
+                    'author': author,
+                    'file': file.filename,
+                    'points': chaos,
+                    'reasons': ", ".join(chaos_messages),
+                    'commit_message': commit.msg.split('\n')[0],
+                })
+
+                if file.filename not in battlefields:
+                    battlefields[file.filename] = {
+                        'accumulated_chaos': 0, 'final_size': 0
+                    }
+                battlefields[file.filename]['accumulated_chaos'] += chaos
+
+            # Acumula dados de limpeza
+            if cleanup > 0:
+                janitors_score[author] = janitors_score.get(author, 0) + cleanup
+
+            # Atualiza tamanho final do arquivo
+            if file.filename in battlefields:
+                battlefields[file.filename]['final_size'] = calculate_size(file.source_code or "")
 
     return {
         'gooses_score': gooses_score,
