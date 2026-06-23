@@ -13,10 +13,8 @@ MAX_PARAMETERS = 4
 
 
 def load_exclusion_patterns() -> List[str]:
-    """
-    Carrega os padrões de exclusão padrão.
-    Pode ser estendido para ler de um arquivo .gitignore ou config.
-    """
+    # Carrega os padrões de exclusão padrão.
+    # Pode ser estendido para ler de um arquivo .gitignore ou config.
     return [
         "*.tmp",
         "*.log",
@@ -31,16 +29,9 @@ def load_exclusion_patterns() -> List[str]:
 
 
 def should_ignore(file_path: str, exclusion_patterns: List[str]) -> bool:
-    """
-    Verifica se um caminho de arquivo deve ser ignorado baseado nos padrões.
     
-    Args:
-        file_path: Caminho do arquivo a verificar
-        exclusion_patterns: Lista de padrões glob para exclusão
-        
-    Returns:
-        True se o arquivo deve ser ignorado, False caso contrário
-    """
+   # Verifica se um caminho de arquivo deve ser ignorado baseado nos padrões.
+ 
     for pattern in exclusion_patterns:
         if fnmatch.fnmatch(file_path, pattern) or file_path.startswith(pattern):
             return True
